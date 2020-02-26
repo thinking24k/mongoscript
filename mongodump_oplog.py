@@ -15,10 +15,10 @@ db_user="admin"
 db_passwd="123456"
 db_authdbname="admin"
 #路径配置 以斜杠结尾
-# mongo_home="Q:/javaProgramFiles/NOSQL/mongodb-win32-x86_64-2012plus-4.2.0/bin/"
-# backup_home="Q:/javaProgramFiles/NOSQL/mongodb-win32-x86_64-2012plus-4.2.0/bin/"
-mongo_home="/opt/mongodb/mongodb-linux-x86_64-rhel70-4.2.3/bin/"
-backup_home="/opt/mongodb/"
+mongo_home="Q:/javaProgramFiles/NOSQL/mongodb-win32-x86_64-2012plus-4.2.0/bin/"
+backup_home="Q:/javaProgramFiles/NOSQL/mongodb-win32-x86_64-2012plus-4.2.0/bin/"
+# mongo_home="/opt/mongodb/mongodb-linux-x86_64-rhel70-4.2.3/bin/"
+# backup_home="/opt/mongodb/"
 backup_gzip="--gzip"
 backup_time="03:00"
 ############### 方法区################
@@ -80,6 +80,7 @@ def job():
         debug("执行全量备份命令：%s", cmd)
         val = os.system(cmd)
         debug("执行全量备份结果：%s", val)
+        return
     # 读取最后增量备份时间
     backup_time_read = "";
     if os.path.exists(next_backup_time):
@@ -96,7 +97,9 @@ def job():
         bsondump_jsonresult = json.loads(val)
         backup_time_read = bsondump_jsonresult["ts"]
     # 命令行不识别json 需要加斜杠
-    bsondump_endtime_query = {"$timestamp": {"t": int(time.time() - 1), "i": 1}}
+    bsondump_endtime_query = {"$timestamp": {"t": int(time.time()), "i": 1}}
+    #时间提前1秒避免数据丢失，oplog恢复时实际数据不会重复
+    backup_time_read["$timestamp"]["t"]=backup_time_read["$timestamp"]["t"] - 1000
     bsondump_query = {"ts": {"$gt": backup_time_read, "$lte": bsondump_endtime_query}}
     bsondump_query = json.dumps(bsondump_query)
     bsondump_query = bsondump_query.replace("\"", "\\\"")
